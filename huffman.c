@@ -7,11 +7,11 @@
 
 
 #include "huffman.h"
-#include "stdio.h"
-#include "math.h"
-#include "stdlib.h"
-#include "limits.h"
-#include "string.h"
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <string.h>
 
 int totalBlocks;
 
@@ -52,6 +52,7 @@ int parseFile(FILE *f, int blocksize)
 			}
 		}
 	}
+	free(line);
 	return 0;
 }
 
@@ -116,7 +117,7 @@ void addBlock(char *block, int blocksize)
 	if (temp!=NULL)
 	{
 		temp->freq++;
-		temp2 = findFreqPos(temp);
+		temp2 = findFreqPos(temp,temp);
 		if (temp2!=temp)
 		{
 			removeEntry(temp);
@@ -180,17 +181,15 @@ void insertAfter(struct listEntry *block, struct listEntry *previous)
 	}
 }
 
-struct listEntry* findFreqPos(struct listEntry *block)
+struct listEntry* findFreqPos(struct listEntry *block, struct listEntry *start)
 {
+	if (start==NULL) return NULL;
 	struct listEntry *temp;
 	int blockfreq=block->freq;
-	if (block->prev!=NULL)
-	{
-		temp = block->prev;
-		while(temp!=NULL && temp->freq<blockfreq) temp = temp->prev;
-		if (temp!=block->prev) return temp;
-		else return block;
-	}
+	if (start==block) temp=block->prev;
+	else temp=start;
+	while(temp!=NULL && temp->freq<blockfreq) temp = temp->prev;
+	if (temp!=block->prev) return temp;
 	else return block;
 }
 
@@ -205,14 +204,16 @@ struct listEntry* createEntry(int index, uint8_t blocksize)
 		entry->blocksize = blocksize;
 		entry->childs[0] = NULL;
 		entry->childs[1] = NULL;
+		entry->prev = NULL;
+		entry->next = NULL;
 	}
 	return entry;
 }
 
-void initList()
+void initList(struct listEntry **h, struct listEntry **t)
 {
-	head = NULL;
-	tail = NULL;
+	*h = NULL;
+	*t = NULL;
 }
 
 void printEntry(struct listEntry *block)
@@ -310,7 +311,7 @@ void merge(struct listEntry *one, struct listEntry *two)
 	removeEntry(two);
 	deleteEntry(two);
 	struct listEntry *temp;
-	temp = findFreqPos(one);
+	temp = findFreqPos(one,one);
 	if (temp!=one)
 	{
 		removeEntry(one);
@@ -392,12 +393,15 @@ int chopList(int blocks2encode)
 		freq +=temp3->freq;
 		deleteEntry(temp3);
 	}
-	temp3 = createEntry(UINT32_MAX,head->blocksize);
-	temp3->freq = freq;
-	insertAfter(temp3, tail);
-	temp2 = findFreqPos(temp3);
-	removeEntry(temp3);
-	insertAfter(temp3,temp2);
+	if (freq>0)
+	{
+		temp3 = createEntry(UINT32_MAX,head->blocksize);
+		temp3->freq = freq;
+		temp2 = findFreqPos(temp3,tail);
+		if (temp2!=temp3) insertAfter(temp3,temp2);
+		else insertAfter(temp3,tail);
+		num++;
+	}
 	return num;
 }
 
@@ -414,20 +418,16 @@ void makeTree()
 		parent->childs[1] = other;
 		removeEntry(other);
 		removeEntry(one);
-		insertAfter(parent,tail);
-		temp = findFreqPos(parent);
-		if (temp!=parent)
-		{
-			removeEntry(parent);
-			insertAfter(parent,temp);
-		}
+		temp = findFreqPos(parent,tail);
+		if (temp!=parent) insertAfter(parent,temp);
+		else insertAfter(parent,tail);
 	}
 }
 
 void searchTree(struct listEntry *node,int position, char *encoding, uint32_t *blocks, char **codes)
 {
 	int i,j;
-//	printf("position %d\n",position);
+	printf("position %d\n",position);
 	if (node->childs[0]!=NULL)
 	{
 		printf("has childs\n");
@@ -440,16 +440,16 @@ void searchTree(struct listEntry *node,int position, char *encoding, uint32_t *b
 	else
 	{
 		i=0;
-		printf("asdf\n");
+//		printf("asdf\n");
 		while(blocks[i]!=node->index) i++;
 		printf("i: %d\n",i);
-		printf("asdf %d\n",position);
+//		printf("asdf %d\n",position);
 		for (j=0;j<position;j++)
 		{
-			printf("i%d j%d\n",i,j);
+//			printf("i%d j%d\n",i,j);
 			codes[i][j] = encoding[j];
 		}
-		printf("asdf\n");
+//		printf("asdf\n");
 		codes[i][position] = '\0';
 
 		printf("encoded block:\n");
@@ -535,73 +535,42 @@ void makeOutput(FILE *in, FILE *out, uint32_t *blocks, char **codes, int blocksi
 
 }
 
-int doHuffman(const char *input, int blocksize, int num2encode, uint32_t *encodedBlocks, char **codes)
+int makeBlocksList(FILE *fin, int blocksize, struct listEntry **listHead, struct listEntry **listTail)
 {
-	int i,m;
-	FILE *f;
-	f = fopen(input,"r");
-	initList();
+	initList(listHead, listTail);
 //	table = (uint32_t*)malloc(pow(3,blocksize)*sizeof(uint32_t));
-	parseFile(f,blocksize);
-	fclose(f);
-//	struct listEntry *temp;
-//	temp = head;
-//	while (temp!=NULL)
-//	{
-//		printEntry(temp);
-//		temp = temp->next;
-//	}
+	parseFile(fin,blocksize);
 	mergeAll();
-//	printf("================================\n");
-//	temp = head;
-//	while (temp!=NULL)
-//	{
-//		printEntry(temp);
-//		temp = temp->next;
-//	}
 	mergeRest();
-//	printf("================================\n");
-//	temp = head;
-//	while (temp!=NULL)
-//	{
-//		printEntry(temp);
-//		temp = temp->next;
-//	}
-	m = chopList(num2encode);
-//	printf("================================\n");
-//	temp = head;
-//	while (temp!=NULL)
-//	{
-//		printEntry(temp);
-//		temp = temp->next;
-//	}
-//	printf("================================\n");
+	*listHead = head;
+	*listTail = tail;
+	return 0;
+}
 
-	codes = malloc((10+1)*sizeof(char));
-	for(i=0;i<8;i++)
+int doHuffman(struct listEntry **listHead, struct listEntry **listTail, int num2encode, uint32_t **encodedBlocks, char ***codes)
+{
+	int m,i;
+	head = *listHead;
+	tail = *listTail;
+	struct listEntry *temp;
+	m = chopList(num2encode);
+	temp = head;
+	while (temp!=NULL)
 	{
-		codes[i] = malloc((m+1)*sizeof(char));
-		printf("malloc returned: %x\n",codes[i]);
+		printEntry(temp);
+		temp=temp->next;
 	}
-	int j;
-	printf("4-0:::::%x\n",&((codes[4])[1]));
-	printf("M::::::%d\n",m);
-	for (i=0;i<m;i++)
+	*codes = malloc(m*sizeof(char*));
+	for(i=0;i<m;i++)
 	{
-		printf("???????????? %d\n",i);
-		for (j=0;j<m;j++)
-		{
-			printf("%d %d %d\n",i,j,&((codes[i])[j]));
-			codes[i][j] = 0;
-			printf("%d %d %d\n",i,j,codes[i][j]);
-		}
+		(*codes)[i] = malloc(m*sizeof(char));
 	}
-	printf("!!!!!!!!!!!\n");
-	encodedBlocks = (uint32_t*)malloc((20+1)*sizeof(uint32_t));
-	makeBlocksTable(encodedBlocks);
+	*encodedBlocks = (uint32_t*)malloc(m*sizeof(uint32_t));
+	makeBlocksTable(*encodedBlocks);
+	printf("make tree?\n");
 	makeTree();
-//	printf("total: %d\n",totalBlocks);
+	printf("total: %d\n",totalBlocks);
 	char encoding[20+1];
-	searchTree(head,0,encoding,encodedBlocks,codes);
+	searchTree(head,0,encoding,*encodedBlocks,*codes);
 	return m;
 }

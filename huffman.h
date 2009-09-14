@@ -23,17 +23,18 @@ struct listEntry
 	struct listEntry *childs[2];
 };
 
-int doHuffman(const char *input, int blocksize, int num2encode, uint32_t *encodedBlocks, char **codes);
+int makeBlocksList(FILE *fin, int blocksize, struct listEntry **head, struct listEntry **tail);
+int doHuffman(struct listEntry **head, struct listEntry **tail, int num2encode, uint32_t **encodedBlocks, char ***codes);
 int parseFile(FILE *f, int blocksize);
 int findIndex(char *s,int blocksize);
 int findString(char *s,int blocksize,uint32_t index);
 void addBlock(char *block, int blocksize);
 void removeEntry(struct listEntry *block);
 void insertAfter(struct listEntry *block, struct listEntry *previous);
-struct listEntry* findFreqPos(struct listEntry *block);
+struct listEntry* findFreqPos(struct listEntry *block, struct listEntry *start);
 struct listEntry* createEntry(int index, uint8_t blocksize);
 void deleteEntry(struct listEntry *entry);
-void initList();
+void initList(struct listEntry **h, struct listEntry **t);
 void printEntry(struct listEntry *block);
 void mergeAll();
 struct listEntry* findNextUnspecified(struct listEntry *block);

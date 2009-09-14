@@ -9,27 +9,33 @@
 #include "math.h"
 #include "stdlib.h"
 
-extern struct listEntry *head;
 extern int totalBlocks;
 
 
 int main(int argc, char *argv[])
 {
-	int i,m48;
+	int i,m48,blocksize,num2encode;
 	uint32_t *encodedBlocks48;
+	struct listEntry *head,*tail;
 	char **codes48;
-	m48 = doHuffman("data.txt",4,8,encodedBlocks48,codes48);
-	for (i=0;i<m48+1;i++)
+	blocksize = 4;
+	num2encode = 10;
+	FILE *fin,*fout;
+	fin = fopen("data.txt","r");
+	if (fin==NULL) return -1;
+	makeBlocksList(fin, blocksize, &head, &tail);
+	fclose(fin);
+	m48 = doHuffman(&head, &tail, num2encode, &encodedBlocks48, &codes48);
+	printf("done?\n");
+	for (i=0;i<m48;i++)
 	{
 		printf("block: %d, code %s\n",encodedBlocks48[i],codes48[i]);
 	}
-	FILE *fin,*fout;
 	fin = fopen("data.txt","r");
 	fout = fopen("output.txt","w");
-//	makeOutput(fin, fout, encodedBlocks48, codes48, 4,m48);
+	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize,m48);
 	fclose(fin);
 	fclose(fout);
-
 
 
 
