@@ -217,11 +217,12 @@ void initList()
 
 void printEntry(struct listEntry *block)
 {
+	int i;
 	printf("Entry:\n");
 	char str[4];
 	findString(str,4,block->index);
-	printf("%s\n",str);
-	printf("index: %d\n",block->index);
+	for (i=0;i<block->blocksize;i++) printf("%c",str[i]);
+	printf("\nindex: %d\n",block->index);
 	printf("frequency: %d\n",block->freq);
 }
 
@@ -231,20 +232,20 @@ void mergeAll()
 	uint8_t blocksize = head->blocksize;
 	char str1[blocksize], str2[blocksize];
 	current = head;
-	printf("hello?\n");
+//	printf("hello?\n");
 	while((current=findNextUnspecified(current))!=NULL)
 	{
-		printf("current:\n");
+//		printf("current:\n");
 		printEntry(current);
 		findString(str1,blocksize,current->index);
 		temp = current;
 		while((temp=findNextUnspecified(temp))!=NULL)
 		{
-			printf("merge???? %d %d\n",current->index,temp->index);
+//			printf("merge???? %d %d\n",current->index,temp->index);
 			findString(str2,blocksize, temp->index);
 			if (canMerge(str1,str2,blocksize))
 			{
-				printf("merge!!!\n");
+//				printf("merge!!!\n");
 				temp2 = temp->prev;
 				mergeX(current,temp);
 				temp = temp2;
@@ -336,21 +337,21 @@ void mergeRest()
 	char str1[blocksize], str2[blocksize];
 	int merged,i;
 	current = head;
-	printf("hello?\n");
+//	printf("hello?\n");
 	while((current=findNextUnspecified(current))!=NULL)
 	{
-		printf("current:\n");
+//		printf("current:\n");
 		printEntry(current);
 		findString(str1,blocksize,current->index);
 		temp = head;
 		merged = 0;
 		while((temp=temp->next)!=NULL)
 		{
-			printf("merge???? %d %d\n",current->index,temp->index);
+//			printf("merge???? %d %d\n",current->index,temp->index);
 			findString(str2,blocksize, temp->index);
 			if (canMerge(str1,str2,blocksize)&&current!=temp)
 			{
-				printf("merge!!!\n");
+//				printf("merge!!!\n");
 				mergeX(current,temp);
 				temp = tail;
 				merged = 1;
@@ -370,14 +371,15 @@ void mergeRest()
 
 }
 
-void chopList(int blocks2encode)
+int chopList(int blocks2encode)
 {
-	int i,freq=0;
+	int i,num=0,freq=0;
 	struct listEntry *temp=head,*temp2,*temp3;
 	for (i=0;i<blocks2encode;i++)
 	{
 		if (temp!=NULL)
 		{
+			num++;
 			temp = temp->next;
 		}
 	}
@@ -396,6 +398,7 @@ void chopList(int blocks2encode)
 	temp2 = findFreqPos(temp3);
 	removeEntry(temp3);
 	insertAfter(temp3,temp2);
+	return num;
 }
 
 void makeTree()
@@ -427,20 +430,26 @@ void searchTree(struct listEntry *node,int position, char *encoding, uint32_t *b
 //	printf("position %d\n",position);
 	if (node->childs[0]!=NULL)
 	{
-//		printf("has childs\n");
+		printf("has childs\n");
 		encoding[position] = '0';
 		searchTree(node->childs[0],position+1,encoding,blocks,codes);
+		printf("child2\n");
 		encoding[position] = '1';
 		searchTree(node->childs[1],position+1,encoding,blocks,codes);
 	}
 	else
 	{
 		i=0;
+		printf("asdf\n");
 		while(blocks[i]!=node->index) i++;
+		printf("i: %d\n",i);
+		printf("asdf %d\n",position);
 		for (j=0;j<position;j++)
 		{
+			printf("i%d j%d\n",i,j);
 			codes[i][j] = encoding[j];
 		}
+		printf("asdf\n");
 		codes[i][position] = '\0';
 
 		printf("encoded block:\n");
@@ -524,4 +533,75 @@ void makeOutput(FILE *in, FILE *out, uint32_t *blocks, char **codes, int blocksi
 		fprintf(out,"\n");
 	}
 
+}
+
+int doHuffman(const char *input, int blocksize, int num2encode, uint32_t *encodedBlocks, char **codes)
+{
+	int i,m;
+	FILE *f;
+	f = fopen(input,"r");
+	initList();
+//	table = (uint32_t*)malloc(pow(3,blocksize)*sizeof(uint32_t));
+	parseFile(f,blocksize);
+	fclose(f);
+//	struct listEntry *temp;
+//	temp = head;
+//	while (temp!=NULL)
+//	{
+//		printEntry(temp);
+//		temp = temp->next;
+//	}
+	mergeAll();
+//	printf("================================\n");
+//	temp = head;
+//	while (temp!=NULL)
+//	{
+//		printEntry(temp);
+//		temp = temp->next;
+//	}
+	mergeRest();
+//	printf("================================\n");
+//	temp = head;
+//	while (temp!=NULL)
+//	{
+//		printEntry(temp);
+//		temp = temp->next;
+//	}
+	m = chopList(num2encode);
+//	printf("================================\n");
+//	temp = head;
+//	while (temp!=NULL)
+//	{
+//		printEntry(temp);
+//		temp = temp->next;
+//	}
+//	printf("================================\n");
+
+	codes = malloc((10+1)*sizeof(char));
+	for(i=0;i<8;i++)
+	{
+		codes[i] = malloc((m+1)*sizeof(char));
+		printf("malloc returned: %x\n",codes[i]);
+	}
+	int j;
+	printf("4-0:::::%x\n",&((codes[4])[1]));
+	printf("M::::::%d\n",m);
+	for (i=0;i<m;i++)
+	{
+		printf("???????????? %d\n",i);
+		for (j=0;j<m;j++)
+		{
+			printf("%d %d %d\n",i,j,&((codes[i])[j]));
+			codes[i][j] = 0;
+			printf("%d %d %d\n",i,j,codes[i][j]);
+		}
+	}
+	printf("!!!!!!!!!!!\n");
+	encodedBlocks = (uint32_t*)malloc((20+1)*sizeof(uint32_t));
+	makeBlocksTable(encodedBlocks);
+	makeTree();
+//	printf("total: %d\n",totalBlocks);
+	char encoding[20+1];
+	searchTree(head,0,encoding,encodedBlocks,codes);
+	return m;
 }

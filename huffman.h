@@ -23,6 +23,7 @@ struct listEntry
 	struct listEntry *childs[2];
 };
 
+int doHuffman(const char *input, int blocksize, int num2encode, uint32_t *encodedBlocks, char **codes);
 int parseFile(FILE *f, int blocksize);
 int findIndex(char *s,int blocksize);
 int findString(char *s,int blocksize,uint32_t index);
@@ -42,7 +43,7 @@ void merge(struct listEntry *one, struct listEntry *two);
 void mergeStrings(char *str1, char *str2, int blocksize);
 void mergeRest();
 void makeTree();
-void chopList(int blocks2encode);
+int chopList(int blocks2encode);
 void searchTree(struct listEntry *node,int position, char *encoding, uint32_t *blocks, char **codes);
 void makeBlocksTable(uint32_t *table);
 void makeOutput(FILE *in, FILE *out, uint32_t *blocks, char **codes,int blocksize, int encodedblocks);
