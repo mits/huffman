@@ -11,7 +11,6 @@
 
 extern int totalBlocks;
 
-
 int main(int argc, char *argv[])
 {
 	int i,m48,blocksize,num2encode;
@@ -36,17 +35,5 @@ int main(int argc, char *argv[])
 	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize,m48);
 	fclose(fin);
 	fclose(fout);
-
-
-
-
-
-
-
-
-
-
-
-
 	return 0;
 }
