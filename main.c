@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 	blocksize = 4;
 	num2encode = 10;
 	FILE *fin,*fout;
-	fin = fopen("data.txt","r");
+	fin = fopen("datasmall.vec","r");
 	if (fin==NULL) return -1;
 	makeBlocksList(fin, blocksize, &head, &tail);
 	fclose(fin);
@@ -30,9 +30,9 @@ int main(int argc, char *argv[])
 	{
 		printf("block: %d, code %s\n",encodedBlocks48[i],codes48[i]);
 	}
-	fin = fopen("data.txt","r");
+	fin = fopen("dataaa.txt","r");
 	fout = fopen("output.txt","w");
-	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize,m48);
+//	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize,m48);
 	fclose(fin);
 	fclose(fout);
 	return 0;

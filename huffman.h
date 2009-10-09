@@ -26,6 +26,7 @@ struct listEntry
 int makeBlocksList(FILE *fin, int blocksize, struct listEntry **head, struct listEntry **tail);
 int doHuffman(struct listEntry **head, struct listEntry **tail, int num2encode, uint32_t **encodedBlocks, char ***codes);
 int parseFile(FILE *f, int blocksize);
+size_t readLine(char *line, size_t maxBytes,FILE *f);
 int findIndex(char *s,int blocksize);
 int findString(char *s,int blocksize,uint32_t index);
 void addBlock(char *block, int blocksize);
@@ -36,6 +37,7 @@ struct listEntry* createEntry(int index, uint8_t blocksize);
 void deleteEntry(struct listEntry *entry);
 void initList(struct listEntry **h, struct listEntry **t);
 void printEntry(struct listEntry *block);
+void printList(struct listEntry *head);
 void mergeAll();
 struct listEntry* findNextUnspecified(struct listEntry *block);
 int canMerge(char *str1,  char *str2, int blocksize);

@@ -14,7 +14,7 @@
 #include <string.h>
 
 int totalBlocks;
-
+/*
 int parseFile(FILE *f, int blocksize)
 {
 	if (f==NULL) return -1;
@@ -36,7 +36,14 @@ int parseFile(FILE *f, int blocksize)
 		index = 0;
 		while(!doneline)
 		{
-			if (line[pos]=='\0') doneline = 1;
+			if (line[pos]=='\0')
+			{
+				doneline = 1;
+				if (index>0)
+				{
+
+				}
+			}
 			else
 			{
 				block[index] = line[pos];
@@ -46,10 +53,72 @@ int parseFile(FILE *f, int blocksize)
 				{
 					addBlock(block,blocksize);
 					totalBlocks++;
-					printf("%s   %d\n",block,pos);
+//					printf("%s   %d\n",block,pos);
 					index = 0;
 				}
 			}
+		}
+	}
+	free(line);
+	return 0;
+}
+*/
+size_t readLine(char *line, size_t maxBytes,FILE *f)
+{
+	int pos=0;
+	while(pos<maxBytes+1)
+	{
+		line[pos] = getc(f);
+		if (line[pos]=='\n'||line[pos]==EOF)
+		{
+			line[pos] = '\0';
+			return pos;
+		}
+		pos++;
+	}
+	return pos;
+}
+
+int parseFile(FILE *f, int blocksize)
+{
+	if (f==NULL) return -1;
+	totalBlocks = 0;
+	int pos, index, done=0;
+	size_t maxlinesize=10;
+	char block[blocksize];
+	char *num;
+	num = (char *)malloc(maxlinesize*sizeof(char));
+	readLine(num,maxlinesize,f);
+	maxlinesize = atoi(num);
+	printf("parseFile, linesize: %d\n",maxlinesize);
+	char *line = (char *)malloc(sizeof(char)*(maxlinesize+1));
+	while (!done)
+	{
+
+		if (readLine(line, maxlinesize,f)==0||line[0]=='E')
+		{
+			done = 1;
+			break;
+		}
+//		printf("parseFile, line: %s\n",line);
+
+		index = 0;
+		for(pos=0;pos<maxlinesize;pos++)
+		{
+			block[index] = line[pos];
+			index++;
+			if (index==blocksize)
+			{
+				addBlock(block,blocksize);
+				totalBlocks++;
+				index = 0;
+			}
+		}
+		if (index)
+		{
+			for(pos=index;pos<blocksize;pos++) block[pos] = 'X';
+			addBlock(block,blocksize);
+			totalBlocks++;
 		}
 	}
 	free(line);
@@ -107,8 +176,6 @@ struct listEntry *head, *tail;
 
 void addBlock(char *block, int blocksize)
 {
-	printf("addBlock: got %s\n",block);
-
 	int blockIndex;
 	struct listEntry *temp = head;
 	struct listEntry *temp2;
@@ -225,6 +292,16 @@ void printEntry(struct listEntry *block)
 	for (i=0;i<block->blocksize;i++) printf("%c",str[i]);
 	printf("\nindex: %d\n",block->index);
 	printf("frequency: %d\n",block->freq);
+}
+
+void printList(struct listEntry *head)
+{
+	struct listEntry *cur = head;
+	while(cur!=NULL)
+	{
+		printEntry(cur);
+		cur = cur->next;
+	}
 }
 
 void mergeAll()
@@ -538,10 +615,15 @@ void makeOutput(FILE *in, FILE *out, uint32_t *blocks, char **codes, int blocksi
 int makeBlocksList(FILE *fin, int blocksize, struct listEntry **listHead, struct listEntry **listTail)
 {
 	initList(listHead, listTail);
-//	table = (uint32_t*)malloc(pow(3,blocksize)*sizeof(uint32_t));
 	parseFile(fin,blocksize);
+	printf("AFTER PARSE FILE!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	printList(head);
 	mergeAll();
+	printf("AFTER MERGES!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	printList(head);
 	mergeRest();
+	printf("AFTER MERGEREST!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	printList(head);
 	*listHead = head;
 	*listTail = tail;
 	return 0;
@@ -552,14 +634,9 @@ int doHuffman(struct listEntry **listHead, struct listEntry **listTail, int num2
 	int m,i;
 	head = *listHead;
 	tail = *listTail;
-	struct listEntry *temp;
 	m = chopList(num2encode);
-	temp = head;
-	while (temp!=NULL)
-	{
-		printEntry(temp);
-		temp=temp->next;
-	}
+	printf("AFTER CHOP!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	printList(head);
 	*codes = malloc(m*sizeof(char*));
 	for(i=0;i<m;i++)
 	{
