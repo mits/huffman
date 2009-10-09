@@ -287,8 +287,8 @@ void printEntry(struct listEntry *block)
 {
 	int i;
 	printf("Entry:\n");
-	char str[4];
-	findString(str,4,block->index);
+	char str[block->blocksize];
+	findString(str,block->blocksize,block->index);
 	for (i=0;i<block->blocksize;i++) printf("%c",str[i]);
 	printf("\nindex: %d\n",block->index);
 	printf("frequency: %d\n",block->freq);
@@ -311,13 +311,13 @@ void mergeAll()
 	char str1[blocksize], str2[blocksize];
 	current = head;
 //	printf("hello?\n");
-	while((current=findNextUnspecified(current))!=NULL)
+	while((current=findUnspecified(current))!=NULL)
 	{
 //		printf("current:\n");
-		printEntry(current);
+//		printEntry(current);
 		findString(str1,blocksize,current->index);
 		temp = current;
-		while((temp=findNextUnspecified(temp))!=NULL)
+		while((temp=findUnspecified(temp))!=NULL)
 		{
 //			printf("merge???? %d %d\n",current->index,temp->index);
 			findString(str2,blocksize, temp->index);
@@ -333,12 +333,12 @@ void mergeAll()
 }
 
 
-struct listEntry* findNextUnspecified(struct listEntry *block)
+struct listEntry* findUnspecified(struct listEntry *block)
 {
-	if (block==NULL) return NULL;
+	if (block == NULL) return NULL;
 	char str[block->blocksize];
 	int i;
-	struct listEntry *temp = block->next;
+	struct listEntry *temp = block;
 	while(temp!=NULL)
 	{
 		findString(str,temp->blocksize,temp->index);
@@ -414,9 +414,9 @@ void mergeRest()
 	uint8_t blocksize = head->blocksize;
 	char str1[blocksize], str2[blocksize];
 	int merged,i;
-	current = head;
+	current = findUnspecified(head);
 //	printf("hello?\n");
-	while((current=findNextUnspecified(current))!=NULL)
+	while(current!=NULL)
 	{
 //		printf("current:\n");
 		printEntry(current);
@@ -434,7 +434,6 @@ void mergeRest()
 				temp = tail;
 				merged = 1;
 			}
-
 		}
 		if (merged == 0)
 		{
@@ -443,10 +442,9 @@ void mergeRest()
 				if (str1[i]=='X') str1[i] = (rand() % 2)?'1':'0';
 			}
 			current->index = findIndex(str1,blocksize);
+			current = findUnspecified(current->next);
 		}
-
 	}
-
 }
 
 int chopList(int blocks2encode)
@@ -554,62 +552,76 @@ void makeBlocksTable(uint32_t *table)
 	table[i] = UINT32_MAX;
 }
 
+void encodeBlock(char *unenc, char *enc, uint32_t *blocks, char **codes, int blocksize, int encodedblocks, char *unencodedCode)
+{
+	char str[blocksize];
+	int i=0;
+	findString(str,blocksize,blocks[i]);
+	while(!canMerge(unenc,str,blocksize)&&i<encodedblocks)
+	{
+		i++;
+		findString(str,blocksize,blocks[i]);
+	}
+	if (i<encodedblocks)
+	{
+		strcpy(enc,codes[i]);
+//		printf("%s %s\n",unenc, codes[i]);
+	}
+	else
+	{
+		for (i=0;i<blocksize;i++) if (unenc[i]=='X') unenc[i] = (rand() % 2)?'1':'0';
+		sprintf(enc,"%s%s",unencodedCode,unenc);
+	}
+}
+
+
 void makeOutput(FILE *in, FILE *out, uint32_t *blocks, char **codes, int blocksize, int encodedblocks)
 {
 	if (in==NULL||out==NULL) return;
 	int pos, index, doneline,done=0;
 	int i;
-	char *line = (char *)malloc(sizeof(char)*MAXLINESIZE);
+	int linelen;
+	char num[10];
+	char temp[encodedblocks+1];
+	readLine(num,10,in);
+	linelen = atoi(num);
+	char *line = (char *)malloc(sizeof(char)*linelen);
 	char block[blocksize+1],str[blocksize];
 	char unencoded[encodedblocks+1];
 	i=0;
-	while(blocks[i]<UINT32_MAX) i++;
-	strcpy(unencoded,codes[i]);
-	size_t maxlinesize=MAXLINESIZE;
+	while(blocks[i]<UINT32_MAX && i<encodedblocks) i++;
+	if (i<encodedblocks) strcpy(unencoded,codes[i]);
 	block[blocksize]='\0';
 	while (!done)
 	{
-		if (getline(&line, &maxlinesize,in)==-1)
+		if (readLine(line, linelen,in)==0||line[0]=='E')
 		{
 			done = 1;
 			break;
 		}
-		printf("%s",line);
-		doneline=0;
-		pos = 0;
 		index = 0;
-		while(!doneline)
+		for(pos=0;pos<linelen;pos++)
 		{
-			if (line[pos]=='\0') doneline = 1;
-			else
+			block[index] = line[pos];
+			index++;
+			if (index==blocksize)
 			{
-				block[index] = line[pos];
-				index++;
-				pos++;
-				if (index==blocksize)
-				{
-					i=0;
-					findString(str,blocksize,blocks[i]);
-					while(!canMerge(block,str,blocksize)&&i<encodedblocks)
-					{
-						i++;
-						findString(str,blocksize,blocks[i]);
-					}
-					if (i<encodedblocks)
-					{
-						fprintf(out,"%s",codes[i]);
-					}
-					else
-					{
-						fprintf(out,"%s%s",unencoded,block);
-					}
-					index=0;
-				}
+				encodeBlock(block, temp, blocks, codes, blocksize, encodedblocks, unencoded);
+				fprintf(out,"%s",temp);
+				totalBlocks++;
+				index = 0;
 			}
+		}
+		if (index)
+		{
+			for(pos=index;pos<blocksize;pos++) block[pos] = 'X';
+			encodeBlock(block, temp, blocks, codes, blocksize, encodedblocks, unencoded);
+			fprintf(out,"%s",temp);
+			totalBlocks++;
 		}
 		fprintf(out,"\n");
 	}
-
+	free(line);
 }
 
 int makeBlocksList(FILE *fin, int blocksize, struct listEntry **listHead, struct listEntry **listTail)
@@ -618,9 +630,9 @@ int makeBlocksList(FILE *fin, int blocksize, struct listEntry **listHead, struct
 	parseFile(fin,blocksize);
 	printf("AFTER PARSE FILE!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 	printList(head);
-	mergeAll();
-	printf("AFTER MERGES!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-	printList(head);
+	//mergeAll();
+//	printf("AFTER MERGES!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+//	printList(head);
 	mergeRest();
 	printf("AFTER MERGEREST!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 	printList(head);

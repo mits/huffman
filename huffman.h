@@ -39,7 +39,7 @@ void initList(struct listEntry **h, struct listEntry **t);
 void printEntry(struct listEntry *block);
 void printList(struct listEntry *head);
 void mergeAll();
-struct listEntry* findNextUnspecified(struct listEntry *block);
+struct listEntry* findUnspecified(struct listEntry *block);
 int canMerge(char *str1,  char *str2, int blocksize);
 void mergeX(struct listEntry *one, struct listEntry *two);
 void merge(struct listEntry *one, struct listEntry *two);
@@ -50,4 +50,5 @@ int chopList(int blocks2encode);
 void searchTree(struct listEntry *node,int position, char *encoding, uint32_t *blocks, char **codes);
 void makeBlocksTable(uint32_t *table);
 void makeOutput(FILE *in, FILE *out, uint32_t *blocks, char **codes,int blocksize, int encodedblocks);
+void encodeBlock(char *unenc, char *enc, uint32_t *blocks, char **codes, int blocksize, int encodedblocks, char *unencodedCode);
 #endif /* HUFFMAN_H_ */

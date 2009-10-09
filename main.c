@@ -17,22 +17,23 @@ int main(int argc, char *argv[])
 	uint32_t *encodedBlocks48;
 	struct listEntry *head,*tail;
 	char **codes48;
-	blocksize = 4;
-	num2encode = 10;
+	blocksize = 20;
+	num2encode = 8;
 	FILE *fin,*fout;
-	fin = fopen("datasmall.vec","r");
+	fin = fopen("datalarge.vec","r");
 	if (fin==NULL) return -1;
 	makeBlocksList(fin, blocksize, &head, &tail);
 	fclose(fin);
 	m48 = doHuffman(&head, &tail, num2encode, &encodedBlocks48, &codes48);
-	printf("done?\n");
+	printf("done? m48=%d\n",m48);
 	for (i=0;i<m48;i++)
 	{
+	  printf("%d\n",i);
 		printf("block: %d, code %s\n",encodedBlocks48[i],codes48[i]);
 	}
-	fin = fopen("dataaa.txt","r");
+	fin = fopen("datalarge.vec","r");
 	fout = fopen("output.txt","w");
-//	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize,m48);
+	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize,m48);
 	fclose(fin);
 	fclose(fout);
 	return 0;
