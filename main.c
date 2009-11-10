@@ -15,24 +15,30 @@ int main(int argc, char *argv[])
 	char **encodedBlocks48;
 	struct listEntry *head,*tail;
 	char **codes48;
+	char outputname[50];
+	FILE *fin,*fout;
 	blocksize = 4;
 	num2encode = 8;
-	FILE *fin,*fout;
-	fin = fopen("datasmall.vec","r");
+	blocksize = atoi(argv[1]);
+	num2encode = atoi(argv[2]);
+	fin = fopen("datasmall.vec", "r");
 	if (fin==NULL) return -1;
 	makeBlocksList(fin, blocksize, &head, &tail);
 	fclose(fin);
 	m48 = doHuffman(&head, &tail, num2encode, &encodedBlocks48, &codes48);
-	printf("done? m48=%d\n",m48);
+	printf("done? m48=%d\n", m48);
 	for (i=0;i<m48;i++)
 	{
-	  printf("%d\n",i);
-		printf("block: %s, code %s\n",encodedBlocks48[i],codes48[i]);
+	  printf("%d\n", i);
+		printf("block: %s, code %s\n", encodedBlocks48[i], codes48[i]);
 	}
-	fin = fopen("datasmall.vec","r");
-	fout = fopen("output.txt","w");
-	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize,m48);
+	fin = fopen("datasmall.vec", "r");
+	sprintf(outputname, "outs-string/outsmall%d-%d.txt", blocksize, num2encode);
+	fout = fopen(outputname, "w");
+	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize, m48);
+	printf("%d",m48);
 	fclose(fin);
 	fclose(fout);
+
 	return 0;
 }

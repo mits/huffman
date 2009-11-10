@@ -342,7 +342,7 @@ void searchTree(struct listEntry *node,int position, char *encoding, char **bloc
 	else
 	{
 		i=0;
-		while(strcmp(blocks[i],node->string)) i++;
+		while(strcmp(blocks[i],node->string)) {printf("%s!%s\n",blocks[i],node->string);i++;}
 		printf("i: %d\n",i);
 		for (j=0;j<position;j++) codes[i][j] = encoding[j];
 		codes[i][position] = '\0';
@@ -357,6 +357,7 @@ void makeBlocksTable(char **table)
 	struct listEntry *temp = head;
 	int i=0;
 	while(temp!=NULL) {
+		printf("&&%s\n",temp->string);
 		if (temp->string[0]!='U') strcpy(table[i++],temp->string);
 		temp = temp->next;
 	}
@@ -366,11 +367,13 @@ void makeBlocksTable(char **table)
 void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocksize, int encodedblocks, char *unencodedCode)
 {
 	int i=0;
-	while(!canMerge(unenc,blocks[i],blocksize)&&i<encodedblocks) i++;
-	if (i<encodedblocks) {
+	while(!canMerge(unenc,blocks[i],blocksize)&&(i<encodedblocks)) i++;
+	if (i<encodedblocks-1) {
 		strcpy(enc,codes[i]);
+		printf("OUT:%d\n",i);
 	} else {
 		for (i=0;i<blocksize;i++) if (unenc[i]=='X') unenc[i] = (rand() % 2)?'1':'0';
+		printf("unencoded\n");
 		sprintf(enc,"%s%s",unencodedCode,unenc);
 	}
 }
@@ -450,8 +453,8 @@ int doHuffman(struct listEntry **listHead, struct listEntry **listTail, int num2
 		(*encodedBlocks)[i] = malloc((head->blocksize+1)*sizeof(char));
 		strcpy((*encodedBlocks)[i],"");
 	}
-	makeBlocksTable(*encodedBlocks);
 	printf("make tree?\n");
+	makeBlocksTable(*encodedBlocks);
 	makeTree();
 	char encoding[20+1];
 	searchTree(head,0,encoding,*encodedBlocks,*codes);
