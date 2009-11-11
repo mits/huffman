@@ -144,6 +144,7 @@ struct listEntry* findFreqPos(struct listEntry *block, struct listEntry *start)
 	if (start==block) temp=block->prev;
 	else temp=start;
 	while(temp!=NULL && temp->freq<blockfreq) temp = temp->prev;
+	if (temp == NULL) return NULL;
 	if (temp!=block->prev) return temp;
 	else return block;
 }
@@ -207,7 +208,8 @@ int canMerge(char *str1,  char *str2, int blocksize)
 {
 	int i;
 	for (i=0;i<blocksize;i++) {
-		if ((str1[i]=='0' && str2[i]=='1')||(str1[i]=='1' && str2[i]=='0')) return 0;
+		if ((str1[i]=='0' && str2[i]=='1')||(str1[i]=='1' && str2[i]=='0')
+				||(str1[i]=='U')||(str2[i]=='U')) return 0;
 	}
 	return 1;
 }
@@ -364,17 +366,18 @@ void makeBlocksTable(char **table)
 	table[i] = "U";
 }
 
-void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocksize, int encodedblocks, char *unencodedCode)
+void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocksize, int encodedblocks, int distinctBlocks)
 {
 	int i=0;
-	while(!canMerge(unenc,blocks[i],blocksize)&&(i<encodedblocks)) i++;
-	if (i<encodedblocks-1) {
+	while(!canMerge(unenc,blocks[i],blocksize)&&(i<distinctBlocks)) i++;
+//	printf("i=%d\n",i);
+	if (i<distinctBlocks) {
 		strcpy(enc,codes[i]);
-		printf("OUT:%d\n",i);
+	//	printf("OUT:%d\n",i);
 	} else {
 		for (i=0;i<blocksize;i++) if (unenc[i]=='X') unenc[i] = (rand() % 2)?'1':'0';
-		printf("unencoded\n");
-		sprintf(enc,"%s%s",unencodedCode,unenc);
+	//	printf("unencoded\n");
+		sprintf(enc,"%s%s",codes[encodedblocks-1],unenc);
 	}
 }
 
@@ -385,6 +388,7 @@ void makeOutput(FILE *in, FILE *out, char **blocks, char **codes, int blocksize,
 	int pos, index, done=0;
 	int i;
 	int linelen;
+	int distinctBlocks;
 	char num[10];
 	char temp[encodedblocks+1];
 	readLine(num,10,in);
@@ -392,10 +396,9 @@ void makeOutput(FILE *in, FILE *out, char **blocks, char **codes, int blocksize,
 	char *line = (char *)malloc(sizeof(char)*linelen);
 	char block[blocksize+1];
 	block[blocksize]='\0';
-	char unencoded[encodedblocks+1];
 	i=0;
 	while(blocks[i][0]!='U' && i<encodedblocks) i++;
-	if (i<encodedblocks) strcpy(unencoded,codes[i]);
+	distinctBlocks = i;
 	while (!done) {
 		if (readLine(line, linelen,in)==0||line[0]=='E') {
 			done = 1;
@@ -406,14 +409,14 @@ void makeOutput(FILE *in, FILE *out, char **blocks, char **codes, int blocksize,
 			block[index] = line[pos];
 			index++;
 			if (index==blocksize) {
-				encodeBlock(block, temp, blocks, codes, blocksize, encodedblocks, unencoded);
+				encodeBlock(block, temp, blocks, codes, blocksize, encodedblocks, distinctBlocks);
 				fprintf(out,"%s",temp);
 				index = 0;
 			}
 		}
 		if (index) {
 			for(pos=index;pos<blocksize;pos++) block[pos] = 'X';
-			encodeBlock(block, temp, blocks, codes, blocksize, encodedblocks, unencoded);
+			encodeBlock(block, temp, blocks, codes, blocksize, encodedblocks, distinctBlocks);
 			fprintf(out,"%s",temp);
 		}
 		fprintf(out,"\n");

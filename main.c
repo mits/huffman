@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 	num2encode = 8;
 	blocksize = atoi(argv[1]);
 	num2encode = atoi(argv[2]);
-	fin = fopen("datasmall.vec", "r");
+	fin = fopen("s9234f.vec", "r");
 	if (fin==NULL) return -1;
 	makeBlocksList(fin, blocksize, &head, &tail);
 	fclose(fin);
@@ -32,8 +32,8 @@ int main(int argc, char *argv[])
 	  printf("%d\n", i);
 		printf("block: %s, code %s\n", encodedBlocks48[i], codes48[i]);
 	}
-	fin = fopen("datasmall.vec", "r");
-	sprintf(outputname, "outs-string/outsmall%d-%d.txt", blocksize, num2encode);
+	fin = fopen("s9234f.vec", "r");
+	sprintf(outputname, "outs-string/out-s9234f-%d-%d.txt", blocksize, num2encode);
 	fout = fopen(outputname, "w");
 	makeOutput(fin, fout, encodedBlocks48, codes48, blocksize, m48);
 	printf("%d",m48);

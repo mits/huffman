@@ -50,5 +50,5 @@ int chopList(int blocks2encode);
 void searchTree(struct listEntry *node,int position, char *encoding, char **blocks, char **codes);
 void makeBlocksTable(char **table);
 void makeOutput(FILE *in, FILE *out, char **blocks, char **codes,int blocksize, int encodedblocks);
-void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocksize, int encodedblocks, char *unencodedCode);
+void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocksize, int encodedblocks, int distinctBlocks);
 #endif /* HUFFMAN_H_ */
