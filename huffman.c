@@ -13,6 +13,37 @@
 #include <limits.h>
 #include <string.h>
 
+void printEntry(struct listEntry *block);
+void printList(struct listEntry *head);
+
+void initList(struct listEntry **h, struct listEntry **t);
+size_t readLine(char *line, size_t maxBytes,FILE *f);
+
+struct listEntry* createEntry(char *str, uint8_t blocksize);
+void addBlock(char *string, int blocksize);
+void removeEntry(struct listEntry *block);
+void deleteEntry(struct listEntry *entry);
+void insertAfter(struct listEntry *block, struct listEntry *previous);
+
+struct listEntry* findFreqPos(struct listEntry *block, struct listEntry *start);
+struct listEntry* findUnspecified(struct listEntry *block);
+
+void mergeAll();
+int canMerge(char *str1,  char *str2, int blocksize);
+void mergeX(struct listEntry *one, struct listEntry *two);
+void merge(struct listEntry *one, struct listEntry *two);
+void mergeStrings(char *str1, char *str2, int blocksize);
+
+int chopList(int blocks2encode);
+void makeTree();
+void searchTree(struct listEntry *node,int position, char *encoding, char **blocks, char **codes);
+void makeBlocksTable(char **table, int *blockFreqs);
+void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocksize, int encodedblocks, int distinctBlocks);
+
+struct listEntry *head, *tail;
+
+//Βοηθητική συνάρτηση, που διαβάζει μια γραμμή, το πολύ μεγέθους maxBytes από το αρχείο f
+//επιστρέφει τον αριθμό των bytes που τελικα διαβάστηκαν
 size_t readLine(char *line, size_t maxBytes,FILE *f)
 {
 	int pos=0;
@@ -27,6 +58,8 @@ size_t readLine(char *line, size_t maxBytes,FILE *f)
 	return pos;
 }
 
+//Η συνάρτηση αυτή διαβάζει το αρχείο f, και γεμίζει τη λίστα με εγγραφές, για μέγεθος block blocksize
+//επιστρέφει τον αριθμό των blocs που διαβάστηκαν
 int parseFile(FILE *f, int blocksize)
 {
 	if (f==NULL) return -1;
@@ -39,7 +72,7 @@ int parseFile(FILE *f, int blocksize)
 	num = (char *)malloc(maxlinesize*sizeof(char));
 	readLine(num,maxlinesize,f);
 	maxlinesize = atoi(num);
-	printf("parseFile, linesize: %d\n",maxlinesize);
+//	printf("parseFile, linesize: %d\n",maxlinesize);
 	char *line = (char *)malloc(sizeof(char)*(maxlinesize+1));
 	while (!done) {
 
@@ -71,13 +104,14 @@ int parseFile(FILE *f, int blocksize)
 	return totalBlocks;
 }
 
-struct listEntry *head, *tail;
-
-void addBlock(char *block, int blocksize)
+//προσθέτει νέα εγγραφή στη λίστα για το string, αν δεν υπάρχει, διαφορετικά
+//αυξάνει τη συχνότητα της υπάρχουσας κατά 1, και διορθώνει τη θέση της στη λίστα,
+//ώστε να μείνει ταξινομημένη
+void addBlock(char *string, int blocksize)
 {
 	struct listEntry *temp = head;
 	struct listEntry *temp2;
-	while(temp!=NULL && strcmp(temp->string,block))	temp = temp->next;
+	while(temp!=NULL && strcmp(temp->string, string))	temp = temp->next;
 	if (temp!=NULL) {
 		temp->freq++;
 		temp2 = findFreqPos(temp,temp);
@@ -87,12 +121,19 @@ void addBlock(char *block, int blocksize)
 		}
 	}
 	else {
-		temp = createEntry(block, blocksize);
+		temp = createEntry(string, blocksize);
 		insertAfter(temp,tail);
 	}
 }
 
+//αρχικοποιεί τους δείκτες της λίστας
+void initList(struct listEntry **h, struct listEntry **t)
+{
+	*h = NULL;
+	*t = NULL;
+}
 
+//αφαιρεί το block από τη λίστα
 void removeEntry(struct listEntry *block)
 {
 	if (block!=tail&&block!=head) {
@@ -113,6 +154,7 @@ void removeEntry(struct listEntry *block)
 	}
 }
 
+//προσθέτει το block στη λίστα, μετά το previous
 void insertAfter(struct listEntry *block, struct listEntry *previous)
 {
 	if(previous!=NULL&&previous!=tail) {
@@ -136,6 +178,7 @@ void insertAfter(struct listEntry *block, struct listEntry *previous)
 	}
 }
 
+//βρίσκει τη θέση στην οποία πρέπει να τοοποεθετηθεί το block, σύμφωνα με τη συχνότητά του
 struct listEntry* findFreqPos(struct listEntry *block, struct listEntry *start)
 {
 	if (start==NULL) return NULL;
@@ -149,6 +192,7 @@ struct listEntry* findFreqPos(struct listEntry *block, struct listEntry *start)
 	else return block;
 }
 
+//δημιουργεί μια νέα εγγραφή με αλφαριθμητικό str
 struct listEntry* createEntry(char *str, uint8_t blocksize)
 {
 	struct listEntry *entry;
@@ -166,19 +210,21 @@ struct listEntry* createEntry(char *str, uint8_t blocksize)
 	return entry;
 }
 
-void initList(struct listEntry **h, struct listEntry **t)
+//διαγράφει την εγγραφή entry
+void deleteEntry(struct listEntry *entry)
 {
-	*h = NULL;
-	*t = NULL;
+	free(entry);
 }
 
+//τυπώνει τα στοιχεία της εγγραφής block
 void printEntry(struct listEntry *block)
 {
 	printf("Entry:\n");
 	printf("%s\n",block->string);
-	printf("frequency: %d\n",block->freq);
+	printf("frequency: %d\n\n",block->freq);
 }
 
+//τυπώνει τη λίστα εγγραφών, ξεκινώντας από το head
 void printList(struct listEntry *head)
 {
 	struct listEntry *cur = head;
@@ -188,6 +234,7 @@ void printList(struct listEntry *head)
 	}
 }
 
+//βρίσκει το πρώτο block με X, ξεκινώντας από το block
 struct listEntry* findUnspecified(struct listEntry *block)
 {
 	if (block == NULL) return NULL;
@@ -204,6 +251,7 @@ struct listEntry* findUnspecified(struct listEntry *block)
 	return NULL;
 }
 
+//επιστρέφει αν τα str1 και str2 μπορούν να συγχωνευτούν
 int canMerge(char *str1,  char *str2, int blocksize)
 {
 	int i;
@@ -214,6 +262,8 @@ int canMerge(char *str1,  char *str2, int blocksize)
 	return 1;
 }
 
+//συγχωνεύει τις εγγραφές one και two, τοποθετώντας το αποτέλεσμα στην one,
+//ενώ αν το αποτέλεσμα είναι ίδιο με κάποια άλλη εγγραφή στη λίστα, συγχωνεύονται και αυτά
 void mergeX(struct listEntry *one, struct listEntry *two)
 {
 	int blocksize = one->blocksize;
@@ -225,6 +275,7 @@ void mergeX(struct listEntry *one, struct listEntry *two)
 	if (temp!=NULL) merge(one,temp);
 }
 
+//προσθέτει τη συχνότητα της two στη one, διαγράφει την two και διορθώνει τη θέση της one
 void merge(struct listEntry *one, struct listEntry *two)
 {
 	one->freq += two->freq;
@@ -238,18 +289,14 @@ void merge(struct listEntry *one, struct listEntry *two)
 	}
 }
 
-
+//αντικαθιστά το str1 με το αποτέλεσμα της συγχώνευσης των str1 και str2
 void mergeStrings(char *str1, char *str2, int blocksize)
 {
 	int i;
 	for(i=0;i<blocksize;i++) if (str1[i]=='X') str1[i]=str2[i];
 }
 
-void deleteEntry(struct listEntry *entry)
-{
-	free(entry);
-}
-
+//πραγματοποιεί όλες τις συγχωνεύσεις
 void mergeAll()
 {
 	struct listEntry *current,*temp;
@@ -281,6 +328,7 @@ void mergeAll()
 	}
 }
 
+//κόβει τη λίστα, αφήνοντας blocks2encode στοιχεία, +1 για τα unencoded blocks
 int chopList(int blocks2encode)
 {
 	int i,num=0,freq=0;
@@ -310,6 +358,29 @@ int chopList(int blocks2encode)
 	return num;
 }
 
+//δημιουργεί τον πίνακα απο strings table και τον πίνακα συχνοτήτων blockFreqs
+void makeBlocksTable(char **table, int *blockFreqs)
+{
+	struct listEntry *temp = head;
+	int i=0;
+	int unencfreq = 0;
+	while(temp!=NULL) {
+//		printf("&&%s\n",temp->string);
+		if (temp->string[0]!='U') {
+			blockFreqs[i] = temp->freq;
+			strcpy(table[i++],temp->string);
+		} else {
+			unencfreq = temp->freq;
+		}
+		temp = temp->next;
+	}
+//	if (unencfreq > 0) {
+		table[i] = "U";
+		blockFreqs[i] = unencfreq;
+//	}
+}
+
+//μετατρέπει τη λίστα σε huffman tree
 void makeTree()
 {
 	struct listEntry *one,*other,*parent,*temp;
@@ -328,44 +399,37 @@ void makeTree()
 	}
 }
 
+//κάνει αναζήτηση στο huffman tree κατά βάθος, και γράφει τους κωδικούς huffman στον πίνακα codes
 void searchTree(struct listEntry *node,int position, char *encoding, char **blocks, char **codes)
 {
 	int i,j;
-	printf("position %d\n",position);
+//	printf("position %d\n",position);
 	if (node->childs[0]!=NULL)
 	{
-		printf("has childs\n");
+//		printf("has childs\n");
 		encoding[position] = '0';
 		searchTree(node->childs[0],position+1,encoding,blocks,codes);
-		printf("child2\n");
+//		printf("child2\n");
 		encoding[position] = '1';
 		searchTree(node->childs[1],position+1,encoding,blocks,codes);
 	}
 	else
 	{
 		i=0;
-		while(strcmp(blocks[i],node->string)) {printf("%s!%s\n",blocks[i],node->string);i++;}
-		printf("i: %d\n",i);
+		while(strcmp(blocks[i],node->string)) {
+//			printf("%s!%s\n",blocks[i],node->string);
+			i++;
+		}
+//		printf("i: %d\n",i);
 		for (j=0;j<position;j++) codes[i][j] = encoding[j];
 		codes[i][position] = '\0';
-		printf("encoded block:\n");
-		printf("block: %s\n",node->string);
-		printf("\nhuffman code: %s\n",codes[i]);
+//		printf("encoded block:\n");
+//		printf("block: %s\n",node->string);
+//		printf("\nhuffman code: %s\n",codes[i]);
 	}
 }
 
-void makeBlocksTable(char **table)
-{
-	struct listEntry *temp = head;
-	int i=0;
-	while(temp!=NULL) {
-		printf("&&%s\n",temp->string);
-		if (temp->string[0]!='U') strcpy(table[i++],temp->string);
-		temp = temp->next;
-	}
-	table[i] = "U";
-}
-
+//γράφει την κωδικοποίηση του unenc στο enc
 void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocksize, int encodedblocks, int distinctBlocks)
 {
 	int i=0;
@@ -382,6 +446,58 @@ void encodeBlock(char *unenc, char *enc, char **blocks, char **codes, int blocks
 }
 
 
+//δημιουργεί τη λίστα των blocks από το αρχείο fin
+int makeBlocksList(FILE *fin, int blocksize, struct listEntry **listHead, struct listEntry **listTail)
+{
+	int total;
+	initList(listHead, listTail);
+	total = parseFile(fin,blocksize);
+//	printf("AFTER PARSE FILE!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+//	printList(head);
+//	printf("---------------------------\n");
+	mergeAll();
+//	printf("AFTER MERGES!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+//	printList(head);
+	*listHead = head;
+	*listTail = tail;
+	return total;
+}
+
+//δέχεται μια λίστα με head listHead και tail listTail,
+//και τον αριθμό των blocks που μπορούν να κωδικοποιηθούν
+//και υπολογίζει τους κωδικούς huffman, δημιουργώντας:
+//τον πίνακα blocks με τα κωδικοποιημένα blocks
+//τον πίνακα codes με τους κωδικούς huffman
+//τον πίνακα blockFreqsPtr με τις συχνότητες των αντίστοιχων blocks
+//επιστρέφει τον αριθμό των blocks που κωδικοποιήθηκαν, +1 αν υπάρχουν μη κωδικοποιημένα blocks
+int doHuffman(struct listEntry **listHead, struct listEntry **listTail, int num2encode, char ***encodedBlocks, char ***codes, int **blockFreqsPtr)
+{
+	int m,i;
+	head = *listHead;
+	tail = *listTail;
+	m = chopList(num2encode);
+//	printf("AFTER CHOP!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+//	printList(head);
+	*codes = malloc(m*sizeof(char*));
+	for(i=0;i<m;i++) {
+		(*codes)[i] = malloc(m*sizeof(char));
+	}
+	*encodedBlocks = malloc(m*sizeof(char *));
+	for(i=0;i<m;i++) {
+		(*encodedBlocks)[i] = malloc((head->blocksize + 1) * sizeof(char));
+		strcpy((*encodedBlocks)[i], "");
+	}
+	*blockFreqsPtr = malloc(m*sizeof(int));
+//	printf("make tree?\n");
+	makeBlocksTable(*encodedBlocks, *blockFreqsPtr);
+	makeTree();
+	char encoding[20+1];
+	searchTree(head, 0, encoding, *encodedBlocks, *codes);
+	return m;
+}
+
+//δημιουργεί το αρχείο out από το in, χρησιμοποιώντας τους κωδικούς huffman
+//στον πίνακα codes (που αντιστοιχούν στα blocks του πίνακα blocks)
 void makeOutput(FILE *in, FILE *out, char **blocks, char **codes, int blocksize, int encodedblocks)
 {
 	if (in==NULL||out==NULL) return;
@@ -422,44 +538,4 @@ void makeOutput(FILE *in, FILE *out, char **blocks, char **codes, int blocksize,
 		fprintf(out,"\n");
 	}
 	free(line);
-}
-
-int makeBlocksList(FILE *fin, int blocksize, struct listEntry **listHead, struct listEntry **listTail)
-{
-	initList(listHead, listTail);
-	parseFile(fin,blocksize);
-	printf("AFTER PARSE FILE!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-	printList(head);
-	printf("---------------------------\n");
-	mergeAll();
-	printf("AFTER MERGES!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-	printList(head);
-	*listHead = head;
-	*listTail = tail;
-	return 0;
-}
-
-int doHuffman(struct listEntry **listHead, struct listEntry **listTail, int num2encode, char ***encodedBlocks, char ***codes)
-{
-	int m,i;
-	head = *listHead;
-	tail = *listTail;
-	m = chopList(num2encode);
-	printf("AFTER CHOP!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-	printList(head);
-	*codes = malloc(m*sizeof(char*));
-	for(i=0;i<m;i++) {
-		(*codes)[i] = malloc(m*sizeof(char));
-	}
-	*encodedBlocks = malloc(m*sizeof(char *));
-	for(i=0;i<m;i++) {
-		(*encodedBlocks)[i] = malloc((head->blocksize+1)*sizeof(char));
-		strcpy((*encodedBlocks)[i],"");
-	}
-	printf("make tree?\n");
-	makeBlocksTable(*encodedBlocks);
-	makeTree();
-	char encoding[20+1];
-	searchTree(head,0,encoding,*encodedBlocks,*codes);
-	return m;
 }
